@@ -7,13 +7,19 @@ namespace timer
     {
         static void Main(string[] args)
         {
+            var input = string.Empty;
+
             if (args == null || args.Length == 0)
             {
-                Console.WriteLine("Invalid input");
-                return;
+                Console.WriteLine("Please enter the time to wait, like 2s, 3m or 1h");
+                input = Console.ReadLine();
+            } 
+            else
+            {
+                input = args[0];
             }
 
-            var (seconds, isValid) = GetArgsSeconds(args[0]);
+            var (seconds, isValid) = GetArgsSeconds(input);
 
             if (!isValid)
             {
