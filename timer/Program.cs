@@ -8,15 +8,29 @@ namespace timer
         static void Main(string[] args)
         {
             var input = string.Empty;
-
-            if (args == null || args.Length == 0)
+            var additionalInput = string.Empty;
+            
+            if (args.Length == 0)
             {
                 Console.WriteLine("Please enter the time to wait, like 2s, 3m or 1h");
                 input = Console.ReadLine();
-            } 
+
+                var split = input.Split(' ').Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+                
+                if (split.Length > 1)
+                {
+                    input = split[0];
+                    additionalInput = split[1];
+                }
+            }
             else
             {
                 input = args[0];
+
+                if (args.Length > 1)
+                {
+                    additionalInput = args[1];
+                }
             }
 
             var (seconds, isValid) = GetArgsSeconds(input);
@@ -25,6 +39,19 @@ namespace timer
             {
                 Console.WriteLine("Invalid input");
                 return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(additionalInput))
+            {
+                var (additionalSeconds, additionalIsValid) = GetArgsSeconds(additionalInput);
+
+                if (!additionalIsValid)
+                {
+                    Console.WriteLine("Invalid input");
+                    return;
+                }
+
+                seconds += additionalSeconds;
             }
 
             var done = false;
