@@ -1,9 +1,6 @@
-﻿using System;
-using System.Timers;
-
-namespace timer
+﻿namespace timer
 {
-    public class TimerService
+    public static class TimerService
     {
         public static void Start(int seconds, Action<int, bool> onSecondsTick)
         {
@@ -13,11 +10,11 @@ namespace timer
                 return;
             }
 
-            var timer = new Timer(1000);
+            var timer = new System.Timers.Timer(1000);
 
             var leftSecond = seconds;
 
-            timer.Elapsed += (object sender, ElapsedEventArgs e) =>
+            timer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) =>
             {
                 leftSecond--;
 
