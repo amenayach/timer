@@ -2,7 +2,7 @@
 {
     public static class TimerService
     {
-        public static void Start(int seconds, Action<int, bool> onSecondsTick)
+        public static void Start(int seconds, string message, Action<int, bool> onSecondsTick)
         {
             if (seconds <= 0)
             {
@@ -31,7 +31,7 @@
                 }
             };
 
-            Console.WriteLine("Starting the timer...");
+            Console.WriteLine($"Starting the {(string.IsNullOrWhiteSpace(message) ? string.Empty : (message + " "))}timer...");
             onSecondsTick?.Invoke(leftSecond, false);
             timer.Start();
         }

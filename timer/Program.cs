@@ -1,5 +1,4 @@
-using System;
-using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace timer
 {
@@ -7,69 +6,76 @@ namespace timer
     {
         static void Main(string[] args)
         {
-            var input = string.Empty;
-            var additionalInput = string.Empty;
-            
+            string firstDuration = string.Empty;
+            string secondDuration = string.Empty;
+            string message = string.Empty;
+
+            // If no arguments provided, ask for user input
             if (args.Length == 0)
             {
-                Console.WriteLine("Please enter the time to wait, like 2s, 3m or 1h");
-                input = Console.ReadLine();
+                Console.WriteLine("Enter the first duration (e.g., 4s, 15m, 1h):");
+                firstDuration = Console.ReadLine()?.Trim() ?? string.Empty;
 
-                var split = input.Split(' ').Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
-                
-                if (split.Length > 1)
+                Console.WriteLine("Enter the second duration (optional, press Enter to skip):");
+                secondDuration = Console.ReadLine()?.Trim() ?? string.Empty;
+
+                Console.WriteLine("Enter a message (optional, press Enter to skip):");
+                string userMessage = Console.ReadLine()?.Trim() ?? string.Empty;
+                if (!string.IsNullOrEmpty(userMessage))
                 {
-                    input = split[0];
-                    additionalInput = split[1];
+                    message = userMessage;
                 }
             }
             else
             {
-                input = args[0];
-
-                if (args.Length > 1)
+                try
                 {
-                    additionalInput = args[1];
+                    (firstDuration, secondDuration, message) = ParseCommandLineArgs(args);
                 }
-            }
-
-            var (seconds, isValid) = GetArgsSeconds(input);
-
-            if (!isValid)
-            {
-                Console.WriteLine("Invalid input");
-                return;
-            }
-
-            if (!string.IsNullOrWhiteSpace(additionalInput))
-            {
-                var (additionalSeconds, additionalIsValid) = GetArgsSeconds(additionalInput);
-
-                if (!additionalIsValid)
+                catch (ArgumentException ex)
                 {
-                    Console.WriteLine("Invalid input");
+                    Console.WriteLine($"Error: {ex.Message}");
+                    ShowUsage();
                     return;
                 }
-
-                seconds += additionalSeconds;
             }
 
-            var done = false;
-
-            TimerService.Start(seconds, (leftSeconds, completed) =>
+            // Validate and process the durations
+            try
             {
-                Display(leftSeconds);
+                var seconds = ParseDuration(firstDuration);
+                int additionalSeconds = 0;
 
-                if (completed)
+                if (!string.IsNullOrEmpty(secondDuration))
                 {
-                    SoundService.PlayAlarm();
-                    done = true;
+                    additionalSeconds = ParseDuration(secondDuration);
                 }
-            });
 
-            while (!done) ;
+                // starting the timer
+                var done = false;
+                var endsAt = DateTime.Now.AddSeconds(seconds);
 
-            Console.WriteLine();
+                TimerService.Start(seconds + additionalSeconds, message, (leftSeconds, completed) =>
+                {
+                    Display(leftSeconds, endsAt);
+
+                    if (completed)
+                    {
+                        SoundService.PlayAlarm();
+                        done = true;
+                    }
+                });
+
+                while (!done) ;
+
+                Console.WriteLine();
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                ShowUsage();
+            }
+
             Console.WriteLine("Please hit enter to exit");
             Console.ReadLine();
         }
@@ -96,10 +102,83 @@ namespace timer
             }
         }
 
-        private static void Display(int leftSeconds)
+        private static void Display(int leftSeconds, DateTime endsAt)
         {
             var timeSpan = new TimeSpan(0, 0, leftSeconds);
-            Console.Write($"\r{timeSpan.Hours:00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}        ");
+            Console.Write($"\r{timeSpan.Hours:00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00} (ends at {endsAt:yyyy-MM-dd HH:mm:ss})       ");
+        }
+
+        static (string firstDuration, string secondDuration, string message) ParseCommandLineArgs(string[] args)
+        {
+            string firstDuration = string.Empty;
+            string secondDuration = string.Empty;
+            string message = string.Empty;
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "-m" && i + 1 < args.Length)
+                {
+                    message = args[i + 1];
+                    i++; // Skip the next argument as it's the message
+                }
+                else if (string.IsNullOrEmpty(firstDuration))
+                {
+                    firstDuration = args[i];
+                }
+                else if (string.IsNullOrEmpty(secondDuration))
+                {
+                    secondDuration = args[i];
+                }
+                else
+                {
+                    throw new ArgumentException("Too many arguments provided.");
+                }
+            }
+
+            if (string.IsNullOrEmpty(firstDuration))
+            {
+                throw new ArgumentException("First duration is required.");
+            }
+
+            return (firstDuration, secondDuration, message);
+        }
+
+        static int ParseDuration(string duration)
+        {
+            if (string.IsNullOrEmpty(duration))
+            {
+                throw new ArgumentException("Duration cannot be empty.");
+            }
+
+            var regex = new Regex(@"^(\d+)(s|m|h)$");
+            var match = regex.Match(duration);
+
+            if (!match.Success)
+            {
+                throw new ArgumentException($"Invalid duration format: {duration}. Expected format: number followed by s, m, or h (e.g., 4s, 15m, 1h)");
+            }
+
+            int value = int.Parse(match.Groups[1].Value);
+            string unit = match.Groups[2].Value;
+
+            return unit switch
+            {
+                "s" => value,
+                "m" => value * 60,
+                "h" => value * 3600,
+                _ => 0
+            };
+        }
+
+        static void ShowUsage()
+        {
+            Console.WriteLine("\nUsage:");
+            Console.WriteLine("  Program.exe <duration1> [duration2] [-m \"message\"]");
+            Console.WriteLine("\nExamples:");
+            Console.WriteLine("  Program.exe 4s");
+            Console.WriteLine("  Program.exe 15m 1h");
+            Console.WriteLine("  Program.exe 30s -m \"Custom message\"");
+            Console.WriteLine("\nDuration format: number followed by s (seconds), m (minutes), or h (hours)");
         }
     }
 }
