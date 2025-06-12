@@ -4,7 +4,7 @@ namespace timer
 {
     static class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             string firstDuration = string.Empty;
             string secondDuration = string.Empty;
@@ -66,7 +66,10 @@ namespace timer
                     }
                 });
 
-                while (!done) ;
+                while (!done)
+                {
+                    await Task.Delay(1000).ConfigureAwait(false);
+                }
 
                 Console.WriteLine();
             }
